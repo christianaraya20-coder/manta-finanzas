@@ -1,4 +1,4 @@
-import { useState, type ReactNode, type FormEvent, useRef, type ChangeEvent } from 'react';
+import { useState, useEffect, type ReactNode, type FormEvent, useRef, type ChangeEvent } from 'react';
 import { 
   BarChart3, 
   LayoutDashboard, 
@@ -35,6 +35,20 @@ import {
 import { KPI } from './components/KPI';
 import { ItemsTable, CLASSIFICATION_OPTIONS } from './components/ItemsTable';
 import { geminiService } from './services/geminiService';
+import { db } from './services/firebase';
+import { collection, addDoc, onSnapshot, query, orderBy, Timestamp, updateDoc, doc, writeBatch } from 'firebase/firestore';
+
+import { 
+  PRESET_COMPANIES, 
+  LIQUIDITY_TREND, 
+  SENSITIVITY_DATA, 
+  MATURITY_DATA, 
+  BREAKDOWN_DATA, 
+  PERFORMANCE_DATA_MAP, 
+  ENTITY_METRICS_MAP, 
+  INITIAL_LOGS 
+} from './data/mockData';
+
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { 
@@ -76,25 +90,6 @@ interface BankAccountConfig {
   };
 }
 
-const PRESET_COMPANIES = [
-  { name: 'Cramick S.A. - Chile', rut: '76.093.977-3', accounts: [
-    { bank: 'ITAU', number: '200359660', currency: 'CLP' as const },
-    { bank: 'BCI Chile', number: '46488031', currency: 'CLP' as const },
-    { bank: 'BCI Miami', number: '120015230', currency: 'USD' as const }
-  ]},
-  { name: 'Bedrock S.A.', rut: '96.965.980-8', accounts: [] },
-  { name: 'Caelus Motors SpA', rut: '77.608.369-0', accounts: [{ bank: 'ITAU', number: '224430313', currency: 'CLP' as const }] },
-  { name: 'Caelus SpA', rut: '76.780.769-4', accounts: [{ bank: 'ITAU', number: '213150658', currency: 'CLP' as const }] },
-  { name: 'Consus Latinoamerica SpA', rut: '77.261.734-8', accounts: [
-    { bank: 'BCI', number: '63713462', currency: 'CLP' as const },
-    { bank: 'ITAU', number: '220803318', currency: 'CLP' as const },
-    { bank: 'Santander', number: '89403839', currency: 'CLP' as const }
-  ]},
-  { name: 'Servicios Informaticos Santiago Tech Spa', rut: '76.369.345-7', accounts: [
-    { bank: 'BCI', number: '52633021', currency: 'CLP' as const },
-    { bank: 'ITAU', number: '209005479', currency: 'CLP' as const }
-  ]}
-];
 
 export default function App() {
   const [activeView, setActiveView] = useState<View>('dashboard');
@@ -284,15 +279,7 @@ function NavButton({ active, icon, label, onClick }: { active?: boolean; icon: R
 // --- Views Components ---
 
 function DashboardView() {
-  const liquidityTrend = [
-    { name: 'Lun', value: 12.4 },
-    { name: 'Mar', value: 12.8 },
-    { name: 'Mie', value: 13.2 },
-    { name: 'Jue', value: 13.1 },
-    { name: 'Vie', value: 13.8 },
-    { name: 'Sab', value: 14.1 },
-    { name: 'Dom', value: 14.25 },
-  ];
+  const liquidityTrend = LIQUIDITY_TREND;
 
   return (
     <div className="space-y-8">
@@ -474,23 +461,9 @@ function ObligationItem({ label, date, amount, dark }: any) {
 }
 
 function LiquidityView() {
-  const data = [
-    { day: 0, value: 80 },
-    { day: 15, value: 70 },
-    { day: 30, value: 85 },
-    { day: 42, value: 45 },
-    { day: 45, value: 42 },
-    { day: 60, value: 88 },
-    { day: 75, value: 95 },
-    { day: 90, value: 82 },
-  ];
+  const data = LIQUIDITY_PROJECTION;
 
-  const breakdown = [
-    { name: 'Cta. Cte. A', amount: '120,000.00', status: 'Inmediato', statusColor: 'secondary' },
-    { name: 'Cta. Cte. B', amount: '45,500.00', status: 'Inmediato', statusColor: 'secondary' },
-    { name: 'DAP 30D', amount: '200,000.00', status: '30 Días', statusColor: 'tertiary' },
-    { name: 'FFMM', amount: '86,600.00', status: '24 Horas', statusColor: 'tertiary' },
-  ];
+  const breakdown = BREAKDOWN_DATA;
 
   return (
     <div className="space-y-8">
@@ -608,26 +581,9 @@ function LiquidityView() {
 }
 
 function FXRiskView() {
-  const sensitivity = [
-    { label: '+1% Tasa UF', value: '+ $2.4M', color: 'secondary' },
-    { label: '+5% USD/CLP', value: '+ $5.6M', color: 'secondary' },
-    { label: '-5% USD/CLP', value: '- $4.8M', color: 'error' },
-  ];
+  const sensitivity = SENSITIVITY_DATA;
 
-  const maturityData = [
-    { name: 'M1', dap: 15, ffmm: 10, credit: 5 },
-    { name: 'M2', dap: 20, ffmm: 5, credit: 10 },
-    { name: 'M3', dap: 12, ffmm: 8, credit: 0 },
-    { name: 'M4', dap: 8, ffmm: 5, credit: 15 },
-    { name: 'M5', dap: 15, ffmm: 12, credit: 0 },
-    { name: 'M6', dap: 25, ffmm: 5, credit: 10 },
-    { name: 'M7', dap: 18, ffmm: 15, credit: 5 },
-    { name: 'M8', dap: 12, ffmm: 10, credit: 0 },
-    { name: 'M9', dap: 8, ffmm: 5, credit: 20 },
-    { name: 'M10', dap: 5, ffmm: 15, credit: 0 },
-    { name: 'M11', dap: 15, ffmm: 10, credit: 8 },
-    { name: 'M12', dap: 15, ffmm: 5, credit: 0 },
-  ];
+  const maturityData = MATURITY_DATA;
 
   return (
     <div className="space-y-8">
@@ -969,38 +925,26 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
     }
   });
 
-  const [logs, setLogs] = useState<ReconciliationLogEntry[]>([
-    {
-      id: '1',
-      timestamp: new Date(Date.now() - 3600000 * 2),
-      user: 'Agente IA',
-      type: 'automated_match',
-      classification: 'factura',
-      details: 'Identificado emparejamiento para Factura #8842 con línea de estado de cuenta AWS SERVICES.',
-      amount: '$3,200.50',
-      tags: ['servicios_it', 'suscripcion']
-    },
-    {
-      id: '2',
-      timestamp: new Date(Date.now() - 3600000 * 24),
-      user: 'Admin',
-      type: 'manual_adjustment',
-      classification: 'liquidación',
-      details: 'Ajuste manual para discrepancia de nómina Manta Tech.',
-      amount: '$12,400.00',
-      tags: ['nomina', 'relacionado_con_impuestos']
-    },
-    {
-      id: '3',
-      timestamp: new Date(Date.now() - 3600000 * 48),
-      user: 'Agente IA',
-      type: 'automated_match',
-      classification: 'rendición',
-      details: 'Conciliación por lotes de 15 entradas para Manta Real Estate.',
-      amount: '$45,000.00',
-      tags: ['transferencia_interna', 'liquidacion']
-    }
-  ]);
+  const [logs, setLogs] = useState<ReconciliationLogEntry[]>(INITIAL_LOGS);
+
+  useEffect(() => {
+    const q = query(collection(db, 'reconciliations'), orderBy('timestamp', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fbLogs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toDate() : new Date(data.timestamp)
+        } as ReconciliationLogEntry;
+      });
+      if (fbLogs.length > 0) {
+        setLogs(fbLogs);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
 
   const [filterType, setFilterType] = useState<string>('all');
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -1068,41 +1012,9 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
   const [performanceEntity, setPerformanceEntity] = useState(config.entity);
   const [comparisonEntity, setComparisonEntity] = useState<string | null>(null);
 
-  const performanceDataMap: Record<string, any[]> = {
-    'Manta Holding SpA': [
-      { date: '04/26', rate: 97.4, manual: 12, time: 45 },
-      { date: '04/27', rate: 98.1, manual: 8, time: 38 },
-      { date: '04/28', rate: 98.5, manual: 10, time: 35 },
-      { date: '04/29', rate: 98.8, manual: 5, time: 28 },
-      { date: '04/30', rate: 99.1, manual: 4, time: 22 },
-      { date: '05/01', rate: 99.2, manual: 3, time: 18 },
-      { date: '05/02', rate: 99.9, manual: 1, time: 12 },
-    ],
-    'Manta Tech Ltda': [
-      { date: '04/26', rate: 92.4, manual: 22, time: 55 },
-      { date: '04/27', rate: 93.1, manual: 18, time: 48 },
-      { date: '04/28', rate: 94.5, manual: 20, time: 45 },
-      { date: '04/29', rate: 95.8, manual: 15, time: 38 },
-      { date: '04/30', rate: 96.1, manual: 14, time: 32 },
-      { date: '05/01', rate: 96.2, manual: 13, time: 28 },
-      { date: '05/02', rate: 97.9, manual: 11, time: 22 },
-    ],
-    'Manta Real Estate Fund': [
-      { date: '04/26', rate: 85.4, manual: 32, time: 75 },
-      { date: '04/27', rate: 86.1, manual: 28, time: 68 },
-      { date: '04/28', rate: 87.5, manual: 30, time: 65 },
-      { date: '04/29', rate: 88.8, manual: 25, time: 58 },
-      { date: '04/30', rate: 89.1, manual: 24, time: 52 },
-      { date: '05/01', rate: 89.2, manual: 23, time: 48 },
-      { date: '05/02', rate: 91.9, manual: 21, time: 42 },
-    ]
-  };
+  const performanceDataMap = PERFORMANCE_DATA_MAP;
 
-  const entityMetricsMap: Record<string, { avgTime: string; manualAdj: string; timeTrend: string; adjTrend: string }> = {
-    'Manta Holding SpA': { avgTime: '18m', manualAdj: '12%', timeTrend: '-6m vs US', adjTrend: '-4% Mejora' },
-    'Manta Tech Ltda': { avgTime: '24m', manualAdj: '18%', timeTrend: '-4m vs US', adjTrend: '-2% Mejora' },
-    'Manta Real Estate Fund': { avgTime: '42m', manualAdj: '21%', timeTrend: '-8m vs US', adjTrend: '-5% Mejora' }
-  };
+  const entityMetricsMap = ENTITY_METRICS_MAP;
 
   const primaryPerformanceData = performanceDataMap[performanceEntity] || performanceDataMap['Manta Holding SpA'];
   const comparisonPerformanceData = comparisonEntity ? performanceDataMap[comparisonEntity] : null;
@@ -1150,29 +1062,32 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
     ...Array.from({ length: 26 }, (_, i) => `Col ${String.fromCharCode(65 + i)}`)
   ];
 
-  const handleManualSubmit = (e: FormEvent) => {
+    const handleManualSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const newEntry: ReconciliationLogEntry = {
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: new Date(),
+    const newEntry = {
+      timestamp: Timestamp.now(),
       user: 'Admin',
       type: 'manual_adjustment',
       details: `Conciliación manual: ${manualForm.bankDesc} vs ${manualForm.erpDesc}. Notas: ${manualForm.notes}`,
-      amount: `$${manualForm.bankAmount}`,
+      amount: `${manualForm.bankAmount}`,
       tags: manualForm.tags
     };
 
-    setLogs(prev => [newEntry, ...prev]);
-    setMismatches(prev => Math.max(0, prev - 1));
-    setIsManualEntryOpen(false);
-    setManualForm({
-      bankAmount: '',
-      bankDesc: '',
-      erpAmount: '',
-      erpDesc: '',
-      notes: '',
-      tags: []
-    });
+    try {
+      await addDoc(collection(db, 'reconciliations'), newEntry);
+      setMismatches(prev => Math.max(0, prev - 1));
+      setIsManualEntryOpen(false);
+      setManualForm({
+        bankAmount: '',
+        bankDesc: '',
+        erpAmount: '',
+        erpDesc: '',
+        notes: '',
+        tags: []
+      });
+    } catch (error) {
+      console.error("Error saving manual reconciliation:", error);
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1349,7 +1264,16 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
           };
         });
 
-        setLogs(prev => [...newLogs, ...prev]);
+              // Save to Firestore
+        const batch = writeBatch(db);
+        newLogs.forEach(log => {
+          const docRef = doc(collection(db, 'reconciliations'));
+          batch.set(docRef, {
+            ...log,
+            timestamp: Timestamp.fromDate(log.timestamp)
+          });
+        });
+        await batch.commit();
         setMismatches(prev => prev + (validRows.length > 15 ? validRows.length - 15 : 0));
         setReconciledCount(prev => prev + (validRows.length > 15 ? 15 : validRows.length));
         setMatchRate(prev => Math.min(99.9, prev + 0.1));
@@ -1460,11 +1384,23 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
           return log;
         });
 
-        if (crossingCount > 0) {
-          setLogs(updatedLogs);
-          setReconciledCount(prev => prev + crossingCount);
-          setMatchRate(prev => Math.min(99.9, prev + (crossingCount * 0.2)));
-        }
+              if (crossingCount > 0) {
+        const batch = writeBatch(db);
+        updatedLogs.forEach(log => {
+          // Only update if it was modified (has 'cruce_sii' tag newly added)
+          if (log.tags?.includes('cruce_sii')) {
+             const docRef = doc(db, 'reconciliations', log.id);
+             batch.update(docRef, {
+               classification: log.classification,
+               details: log.details,
+               tags: log.tags
+             });
+          }
+        });
+        await batch.commit();
+        setReconciledCount(prev => prev + crossingCount);
+        setMatchRate(prev => Math.min(99.9, prev + (crossingCount * 0.2)));
+      }
       }
 
     } catch (error) {
@@ -1477,22 +1413,19 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
   };
 
   const handleManualCrossDoc = (doc: SIIDocument, logId: string) => {
-    const updatedLogs = logs.map(l => {
-      if (l.id === logId) {
-        let cls: any = 'otro';
-        if (doc.type.toLowerCase().includes('factura')) cls = 'factura';
-        else if (doc.type.toLowerCase().includes('boleta')) cls = 'boleta_honorarios';
+        const logToUpdate = logs.find(l => l.id === logId);
+    if (logToUpdate) {
+      let cls: any = 'otro';
+      if (doc.type.toLowerCase().includes('factura')) cls = 'factura';
+      else if (doc.type.toLowerCase().includes('boleta')) cls = 'boleta_honorarios';
 
-        return {
-          ...l,
-          classification: cls,
-          details: `${l.details} [VÍNCULO MANUAL: Folio ${doc.folio} de ${doc.issuer}]`,
-          tags: [...(l.tags || []), 'vinculo_manual_sii']
-        };
-      }
-      return l;
-    });
-    setLogs(updatedLogs);
+      const docRef = doc(db, 'reconciliations', logToUpdate.id);
+      await updateDoc(docRef, {
+        classification: cls,
+        details: `${logToUpdate.details} [VÍNCULO MANUAL: Folio ${doc.folio} de ${doc.issuer}]`,
+        tags: [...(logToUpdate.tags || []), 'vinculo_manual_sii']
+      });
+    }
     setReconciledCount(prev => prev + 1);
     setSiiDocs(prev => prev.filter(d => d.id !== doc.id));
   };
@@ -1587,8 +1520,20 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
       return l;
     });
 
-    const anyChanges = JSON.stringify(updatedLogs) !== JSON.stringify(logs);
-    if (anyChanges) setLogs(updatedLogs);
+        const anyChanges = JSON.stringify(updatedLogs) !== JSON.stringify(logs);
+    if (anyChanges) {
+      const batch = writeBatch(db);
+      updatedLogs.forEach((log, i) => {
+        if (JSON.stringify(log) !== JSON.stringify(logs[i])) {
+          const docRef = doc(db, 'reconciliations', log.id);
+          batch.update(docRef, {
+            classification: log.classification,
+            tags: log.tags
+          });
+        }
+      });
+      await batch.commit();
+    }
 
     try {
       // 2. AI Deep Analysis for remaining mismatches
@@ -1599,9 +1544,8 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
       if (result.bank) {
         setSuggestion(result);
 
-        const newEntry: ReconciliationLogEntry = {
-          id: Math.random().toString(36).substr(2, 9),
-          timestamp: new Date(),
+                const newEntry = {
+          timestamp: Timestamp.now(),
           user: 'Agente IA',
           type: 'automated_match',
           details: `Sugerencia de IA generada: ${result.message}`,
@@ -1609,7 +1553,7 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
           tags: result.tags
         };
 
-        setLogs(prev => [newEntry, ...prev]);
+        await addDoc(collection(db, 'reconciliations'), newEntry);
         setMatchRate(result.confidence > 95 ? 99.9 : 98.5);
         setReconciledCount(prev => prev + 1);
       }
