@@ -119,6 +119,29 @@ export default function App() {
     }
   });
 
+  const handleApproveSuggestion = async () => {
+    if (!suggestion || !suggestion.bank) return;
+
+    const newEntry = {
+      timestamp: Timestamp.now(),
+      user: 'Admin',
+      type: 'manual_adjustment',
+      details: `Conciliación Sugerida Aprobada: ${suggestion.message}`,
+      amount: suggestion.bank,
+      tags: [...(suggestion.tags || []), 'aprobado_ia']
+    };
+
+    try {
+      await addDoc(collection(db, 'reconciliations'), newEntry);
+      setMismatches(prev => Math.max(0, prev - 1));
+      setReconciledCount(prev => prev + 1);
+      // Optional: clear suggestion
+      setSuggestion({ bank: '', erp: '', bankLabel: '', erpLabel: '', confidence: 0, message: '' });
+    } catch (error) {
+      console.error("Error approving suggestion:", error);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-background selection:bg-primary/20">
       {/* Sidebar */}
@@ -1548,7 +1571,7 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
           timestamp: Timestamp.now(),
           user: 'Agente IA',
           type: 'automated_match',
-          details: `Sugerencia de IA generada: ${result.message}`,
+          details: `Análisis de IA: ${result.message}`, 
           amount: result.bank,
           tags: result.tags
         };
@@ -1737,7 +1760,7 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
             ) : (
               <Bot className="h-4 w-4" />
             )}
-            {isProcessing ? "Procesando..." : "Auto-Reconcile with AI"}
+            {isProcessing ? "Procesando..." : "Analizar con IA"}
           </button>
           <button className="rounded-xl border-2 border-outline-variant bg-primary px-6 py-2.5 font-display text-[10px] font-black uppercase tracking-widest text-white transition-all hover:scale-[1.02] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
             Ejecutar Auditoría Global
@@ -2487,7 +2510,7 @@ function ReconciliationView({ config, setConfig }: { config: BankAccountConfig; 
                       type="submit"
                       className="px-8 py-3 rounded-xl border-2 border-outline-variant bg-on-surface text-white font-display text-[11px] font-black uppercase tracking-widest hover:translate-x-1 hover:translate-y-1 transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none"
                     >
-                      Procesar Emparejamiento Manual
+                      Conciliar Manualmente
                     </button>
                   </div>
                 </form>
