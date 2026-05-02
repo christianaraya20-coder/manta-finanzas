@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Bento Grid Minimalist Palette */
+  --color-background: #f0f2f5;
+  --color-surface: #ffffff;
+  --color-on-surface: #0f172a; /* slate-900 */
+  --color-on-surface-variant: #64748b; /* slate-500 */
+  
+  --color-primary: #6366f1; /* indigo-500 */
+  --color-primary-container: #4f46e5; /* indigo-600 */
+  --color-on-primary-container: #ffffff;
+  
+  --color-accent: #dff94d; /* neon-lime */
+  --color-dark: #000000;
+  
+  --color-outline: #cbd5e1; /* slate-200 */
+  --color-outline-variant: #0f172a; /* slate-900 */
+  
+  --color-secondary: #10b981; /* emerald-500 */
+  --color-tertiary: #f59e0b; /* amber-500 */
+  --color-error: #ef4444; /* red-500 */
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Space Grotesk", sans-serif;
+
+  /* Spacing */
+  --spacing-unit: 4px;
+  --spacing-gutter: 16px;
+  --spacing-margin: 24px;
+
+  /* Hard Shadows */
+  --shadow-bento: 8px 8px 0px 0px rgba(0, 0, 0, 0.1);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-sans antialiased;
+  }
+}
+
+/* Custom chart background pattern */
+.chart-grid {
+  background-image: linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Bento Card Utility */
+.bento-card {
+  @apply bg-surface rounded-3xl border-2 border-outline-variant p-6 shadow-bento transition-all duration-300;
+}
+
+.bento-card-dark {
+  @apply bg-on-surface text-surface rounded-3xl p-6 shadow-bento transition-all duration-300;
+}
+
+.bento-card-accent {
+  @apply bg-accent border-2 border-outline-variant rounded-3xl p-6 shadow-bento transition-all duration-300;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-outline-variant rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-outline;
+}
